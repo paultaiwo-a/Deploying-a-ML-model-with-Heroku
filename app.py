@@ -1,34 +1,52 @@
+#sourced from bnsreenu github
+# link at https://github.com/bnsreenu/python_for_microscopists/blob/master/269_How%20to%20deploy%20your%20trained%20machine%20learning%20model%20as%20an%20app%20on%20Heroku/app.py
+
+
 import numpy as np
-import pandas as pd
 from flask import Flask, request, render_template
-from sklearn import preprocessing
 import pickle
 
+#Create an app object using the Flask class.
 app = Flask(__name__)
-model = pickle.load(open('model.pkl', 'rb'))
-cols=['age','workclass','education','marital-status','occupation','relationship','race','gender','capital-gain','capital-loss',
-      'hours-per-week','native-country']
 
+#Load the trained model. (Pickle file)
+model = pickle.load(open('models/model.pkl', 'rb'))
+
+#Define the route to be home.
+#The decorator below links the relative route of the URL to the function it is decorating.
+#Here, home function is with '/', our root directory.
+#Running the app sends us to index.html.
+#Note that render_template means it looks for the file in the templates folder.
+
+#use the route() decorator to tell Flask what URL should trigger our function.
 @app.route('/')
 def home():
     return render_template('index.html')
 
+#You can use the methods argument of the route() decorator to handle different HTTP methods.
+#GET: A GET message is send, and the server returns data
+#POST: Used to send HTML form data to the server.
+#Add Post method to the decorator to allow for form submission.
+#Redirect to /predict page with the output
 @app.route('/predict',methods=['POST'])
 def predict():
-    feature_list = request.form.to_dict()
-    feature_list = list(feature_list.values())
-    feature_list = list(map(int, feature_list))
-    final_features = np.array(feature_list).reshape(1, 12) 
-    
-    prediction = model.predict(final_features)
-    output = int(prediction[0])
-    if output == 1:
-        text = ">50K"
-    else:
-        text = "<=50K"
 
-    return render_template('index.html', prediction_text='Employee Income is {}'.format(text))
+    int_features = [float(x) for x in request.form.values()] #Convert string inputs to float.
+    features = [np.array(int_features)]  #Convert to the form [[a, b]] for input to the model
+    prediction = model.predict(features)  # features Must be in the form [[a, b]]
 
+    output = round(prediction[0], 2)
+
+    return render_template('index.html', prediction_text='Percent with heart disease is {}'.format(output))
+
+
+#When the Python interpreter reads a source file, it first defines a few special variables.
+#For now, we care about the __name__ variable.
+#If we execute our code in the main program, like in our case here, it assigns
+# __main__ as the name (__name__).
+#So if we want to run our code right here, we can check if __name__ == __main__
+#if so, execute it here.
+#If we import this file (module) to another file then __name__ == app (which is the name of this python file).
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
